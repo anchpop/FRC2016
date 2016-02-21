@@ -1,49 +1,92 @@
+import sys
 import wpilib
+import logging
 from math import *
+from networktables import NetworkTable
+from networktables.util import *
 
+#----------------------------------------------------------------------------------
+def clamp(n, low, high):
+    return max(low, min(n, high))
+
+#----------------------------------------------------------------------------------
 class MyRobot(wpilib.IterativeRobot):
+    #: update every 0.005 seconds/5 milliseconds (200Hz)
+    kUpdatePeriod = 0.005
     
     def robotInit(self):
-        """
-        This function is called upon program startup and
-        should be used for any initialization code.
-        """
-        self.robot_drive_left = wpilib.RobotDrive(0,2,1,3)
-        #self.robot_drive_right = wpilib.RobotDrive(3,4)
-        self.stick = wpilib.Joystick(0)
+        self.robot_drive = wpilib.RobotDrive(0,1,2,3)
+        self.maxspeed    = .7
+        
+        # joystick
+        self.stick       = wpilib.Joystick(0)
+        self.num_buttons = self.stick.getButtonCount();
+        print('num buttons: ', self.num_buttons)
+        sys.stdout.flush()
+
+        logging.basicConfig(level=logging.DEBUG)         #to see messages from networktables
+        self.raspi = NetworkTable.getTable('Pi')
 
     def autonomousInit(self):
         """This function is run once each time the robot enters autonomous mode."""
         self.auto_loop_counter = 0
         self.maxspeed = 1
+        self.raspi_control = False
 
     def autonomousPeriodic(self):
-        """This function is called periodically during autonomous."""
-        self.auto_loop_counter += 1
+        """This function is called periodically during autonomous.
         
-        # Check if we've completed 100 loops (approximately 2 seconds)
-        if self.auto_loop_counter < 100:
-            self.robot_drive_left.drive(-0.4, 0) # Drive forwards at half speed
-            #self.robot_drive_right.drive(-0.5, 0) # Drive forwards at half speed
-        elif self.auto_loop_counter < 200:
-            self.robot_drive_left.drive(-0.4, 1) # Drive forwards at half speed
-        elif self.auto_loop_counter < 300:
-            self.robot_drive_left.drive(-0.4, 0) # Drive forwards at half speed
+        Both outputMagnitude and curve are -1.0 to +1.0 values, where 0.0
+        represents stopped and not turning. ``curve < 0`` will turn left and ``curve > 0``
+        will turn right.
+        
+        drive(outputMagnitude, curve)
+                :param outputMagnitude: The speed setting for the outside wheel in a turn,
+                                        forward or backwards, +1 to -1.
+                :param curve:           The rate of turn, constant for different forward speeds. Set
+                                        ``curve < 0`` for left turn or ``curve > 0`` for right turn.
+        """
+        if self.raspi_control:
+            pass
         else:
-            #self.robot_drive_right.drive(0, 0)    #Stop robot
-            self.robot_drive_left.drive(0, 0)    #Stop robot
+            self.auto_loop_counter += 1
+        
+            # Check if we've completed 100 loops (approximately 2 seconds)
+            if self.auto_loop_counter < 100:
+                self.robot_drive.drive(-0.4, 0) # Drive forwards at half speed
+            elif self.auto_loop_counter < 200:
+                self.robot_drive.drive(-0.4, 1) # Drive left at half speed
+            elif self.auto_loop_counter < 300:
+                self.robot_drive.drive(-0.4, 0) # Drive forwards at half speed
+            else:
+                self.robot_drive.drive(0, 0)    # Stop robot
 
+    def stickDrive(self):
+        self.robot_drive.arcadeDrive(clamp(-self.stick.getY(), -self.maxspeed, self.maxspeed),
+                                     clamp(-self.stick.getX(), -self.maxspeed, self.maxspeed))
 
     def teleopInit(self):
-        self.maxspeed = .7
+        self.raspi_control = True
+        self.auto_loop_counter = 0
 
     def teleopPeriodic(self): 
         """This function is called periodically during operator control."""
-        self.robot_drive_left.arcadeDrive(max(min(-self.stick.getY(), self.maxspeed), -self.maxspeed), max(min(-self.stick.getX(), self.maxspeed), -self.maxspeed))#max(min(-self.stick.getX(), self.maxspeed), -self.maxspeed))
+        if self.raspi_control:
+            try:
+                print('piTime: ', self.raspi.getNumber('piTime'))
+                self.raspi.putNumber('robotTime', self.auto_loop_counter)
+            except KeyError:
+                print("piTime: n/a")
+            sys.stdout.flush()
+        else:
+            self.stickDrive()
+            
+        self.auto_loop_counter += 1
 
     def testPeriodic(self):
         """This function is called periodically during test mode."""
         wpilib.LiveWindow.run()
 
+#----------------------------------------------------------------------------------
 if __name__ == "__main__":
     wpilib.run(MyRobot)
