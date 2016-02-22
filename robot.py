@@ -15,14 +15,18 @@ class MyRobot(wpilib.IterativeRobot):
     kUpdatePeriod = 0.005
     
     def robotInit(self):
-        self.robot_drive = wpilib.RobotDrive(0,1,2,3)
+        self.robot_drive = wpilib.RobotDrive(0,2,1,3); self.robot_drive.setSafetyEnabled(False)
+        self.robot_shoot = wpilib.RobotDrive(4,5); self.robot_shoot.setSafetyEnabled(False)
+        #self.robot_shoot.setInvertedMotor(2, True)
+        #self.robot_shoot = wpilib.
+        self.robot_pitch = wpilib.RobotDrive(6,7); self.robot_pitch.setSafetyEnabled(False)
+        
         self.maxspeed    = .7
         
         # joystick
         self.stick       = wpilib.Joystick(0)
         self.num_buttons = self.stick.getButtonCount();
         print('num buttons: ', self.num_buttons)
-        sys.stdout.flush()
 
         logging.basicConfig(level=logging.DEBUG)         #to see messages from networktables
         self.raspi = NetworkTable.getTable('Pi')
@@ -61,25 +65,35 @@ class MyRobot(wpilib.IterativeRobot):
             else:
                 self.robot_drive.drive(0, 0)    # Stop robot
 
-    def stickDrive(self):
+    def stickDrive(self, c):
+
+        power = 1 #if c % 4 < 2 else .5
+
+        self.robot_shoot.arcadeDrive(power if self.stick.getRawButton(5) else (-power if self.stick.getRawButton(3) else 0), 0)  #adjust height of shoot thingy
+
+
+
         self.robot_drive.arcadeDrive(clamp(-self.stick.getY(), -self.maxspeed, self.maxspeed),
                                      clamp(-self.stick.getX(), -self.maxspeed, self.maxspeed))
 
     def teleopInit(self):
-        self.raspi_control = True
+        self.raspi_control = False
         self.auto_loop_counter = 0
+        self.errorReached = False;
 
     def teleopPeriodic(self): 
         """This function is called periodically during operator control."""
+        
         if self.raspi_control:
             try:
                 print('piTime: ', self.raspi.getNumber('piTime'))
                 self.raspi.putNumber('robotTime', self.auto_loop_counter)
             except KeyError:
-                print("piTime: n/a")
-            sys.stdout.flush()
+                if not self.errorReached: 
+                    print("piTime could not be retrieved from table. Is the pi connected?") 
+                    self.errorReached = True;
         else:
-            self.stickDrive()
+            self.stickDrive(self.auto_loop_counter)
             
         self.auto_loop_counter += 1
 
