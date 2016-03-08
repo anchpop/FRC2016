@@ -15,13 +15,19 @@ class MyRobot(wpilib.IterativeRobot):
     kUpdatePeriod = 0.005
     
     def robotInit(self):
-        self.robot_drive = wpilib.RobotDrive(0,2,1,3); self.robot_drive.setSafetyEnabled(False)
-        self.robot_shoot = wpilib.RobotDrive(4,5); self.robot_shoot.setSafetyEnabled(False)
+        # 2 - back left 
+        # 3 - front left
+        # 0 - back right
+        # 1 - front right
+        self.robot_drive = wpilib.RobotDrive(0,1,2,3); self.robot_drive.setSafetyEnabled(False)
+        self.shooter     = wpilib.TalonSRX(6)
+        self.robot_shoot = wpilib.RobotDrive(4,5);     self.robot_shoot.setSafetyEnabled(False)
+        self.servo       = wpilib.Servo(7);
         #self.robot_shoot.setInvertedMotor(2, True)
         #self.robot_shoot = wpilib.
-        self.robot_pitch = wpilib.RobotDrive(6,7); self.robot_pitch.setSafetyEnabled(False)
+        #self.robot_pitch = wpilib.RobotDrive(6,7); self.robot_pitch.setSafetyEnabled(False)
         
-        self.maxspeed    = .7
+        self.maxspeed    = 1
         
         # joystick
         self.stick       = wpilib.Joystick(0)
@@ -69,12 +75,13 @@ class MyRobot(wpilib.IterativeRobot):
 
         power = 1 #if c % 4 < 2 else .5
 
-        self.robot_shoot.arcadeDrive(power if self.stick.getRawButton(5) else (-power if self.stick.getRawButton(3) else 0), 0)  #adjust height of shoot thingy
-
-
+        self.shooter.set(power/2 if self.stick.getRawButton(5) else (-power if self.stick.getRawButton(3) else 0))  #adjust height of shoot thingy
 
         self.robot_drive.arcadeDrive(clamp(-self.stick.getY(), -self.maxspeed, self.maxspeed),
                                      clamp(-self.stick.getX(), -self.maxspeed, self.maxspeed))
+
+        self.servo.set(0 if self.stick.getRawButton(2) else 1)
+        self.robot_shoot.arcadeDrive(-1 if self.stick.getRawButton(7) else (1 if self.stick.getRawButton(8) else 0), 0)
 
     def teleopInit(self):
         self.raspi_control = False
