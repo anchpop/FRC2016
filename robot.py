@@ -37,6 +37,9 @@ class MyRobot(wpilib.IterativeRobot):
         logging.basicConfig(level=logging.DEBUG)         #to see messages from networktables
         self.raspi = NetworkTable.getTable('Pi')
 
+        self.shoot_loop_counter = -1000000
+        self.triggerDepressedLastFrame = False
+
     def autonomousInit(self):
         """This function is run once each time the robot enters autonomous mode."""
         self.auto_loop_counter = 0
@@ -74,14 +77,29 @@ class MyRobot(wpilib.IterativeRobot):
     def stickDrive(self, c):
 
         power = 1 #if c % 4 < 2 else .5
+        shouldActivateServo = False;
+
+        if getTrigger():
+            self.shoot_loop_counter = self.auto_loop_counter
+            self.robot_shoot.arcadeDrive(1, 0)
+
+        if (self.auto_loop_counter - self.shoot_loop_counter < 300 and !getTrigger()):
+            self.servo.set(0)
+            self.robot_shoot.arcadeDrive(1, 0)
+        else:
+            self.servo.set(1)
+            self.robot_shoot.arcadeDrive(0, 0)
+
+        if self.stick.getRawButton(2): self.robot_shoot.arcadeDrive(-1, 0)
+
 
         self.shooter.set(power/2 if self.stick.getRawButton(5) else (-power if self.stick.getRawButton(3) else 0))  #adjust height of shoot thingy
 
         self.robot_drive.arcadeDrive(clamp(-self.stick.getY(), -self.maxspeed, self.maxspeed),
                                      clamp(-self.stick.getX(), -self.maxspeed, self.maxspeed))
 
-        self.servo.set(0 if self.stick.getRawButton(2) else 1)
-        self.robot_shoot.arcadeDrive(-1 if self.stick.getRawButton(7) else (1 if self.stick.getRawButton(8) else 0), 0)
+        
+        #self.robot_shoot.arcadeDrive(-1 if self.stick.getRawButton(7) else (1 if self.stick.getRawButton(8) else 0), 0)
 
     def teleopInit(self):
         self.raspi_control = False
