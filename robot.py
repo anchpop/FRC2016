@@ -37,8 +37,16 @@ class MyRobot(wpilib.IterativeRobot):
         logging.basicConfig(level=logging.DEBUG)         #to see messages from networktables
         self.raspi = NetworkTable.getTable('Pi')
 
-        self.shoot_loop_counter = -1000000
-        self.triggerDepressedLastFrame = False
+        #initializeCamera()
+
+    def initializeCamera():
+        self.camera = wpilib.USBCamera()
+        self.camera.setExposureManual(50)
+        self.camera.setBrightness(80)
+        self.camera.updateSettings() # force update before we start thread
+
+        self.server = wpilib.CameraServer.getInstance()
+        self.server.startAutomaticCapture(self.camera)
 
     def autonomousInit(self):
         """This function is run once each time the robot enters autonomous mode."""
@@ -79,11 +87,11 @@ class MyRobot(wpilib.IterativeRobot):
         power = 1 #if c % 4 < 2 else .5
         shouldActivateServo = False;
 
-        if getTrigger():
+        if self.stick.getTrigger():
             self.shoot_loop_counter = self.auto_loop_counter
             self.robot_shoot.arcadeDrive(1, 0)
 
-        if (self.auto_loop_counter - self.shoot_loop_counter < 300 and !getTrigger()):
+        elif (self.auto_loop_counter - self.shoot_loop_counter < 100):
             self.servo.set(0)
             self.robot_shoot.arcadeDrive(1, 0)
         else:
@@ -106,6 +114,10 @@ class MyRobot(wpilib.IterativeRobot):
         self.auto_loop_counter = 0
         self.errorReached = False;
 
+
+        self.shoot_loop_counter = -1000000
+        self.triggerDepressedLastFrame = False
+
     def teleopPeriodic(self): 
         """This function is called periodically during operator control."""
         
@@ -121,6 +133,8 @@ class MyRobot(wpilib.IterativeRobot):
             self.stickDrive(self.auto_loop_counter)
             
         self.auto_loop_counter += 1
+
+
 
     def testPeriodic(self):
         """This function is called periodically during test mode."""
