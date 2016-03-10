@@ -20,13 +20,13 @@ class MyRobot(wpilib.IterativeRobot):
         # 0 - back right
         # 1 - front right
         self.robot_drive = wpilib.RobotDrive(0,1,2,3); self.robot_drive.setSafetyEnabled(False)
-        self.shooter     = wpilib.TalonSRX(6)
+        self.shooter     = wpilib.CANTalon(6)
         self.robot_shoot = wpilib.RobotDrive(4,5);     self.robot_shoot.setSafetyEnabled(False)
         self.servo       = wpilib.Servo(7);
         #self.robot_shoot.setInvertedMotor(2, True)
         #self.robot_shoot = wpilib.
         #self.robot_pitch = wpilib.RobotDrive(6,7); self.robot_pitch.setSafetyEnabled(False)
-        
+
         self.maxspeed    = 1
         
         # joystick
@@ -38,6 +38,14 @@ class MyRobot(wpilib.IterativeRobot):
         self.raspi = NetworkTable.getTable('Pi')
 
         #initializeCamera()
+
+        self.shooter.changeControlMode(1); #Change control mode of talon, default is PercentVbus (-1.0 to 1.0). 1 is position, which is what we want
+        self.shooter.setFeedbackDevice(0); #0 is quad controller
+        self.shooter.setPID(0.5, 0.001, 0.0); #Set the PID constants (p, i, d)
+        self.shooter.enableControl(); #Enable PID control on the talon
+
+        currentPosition = self.shooter.getEncPosition();
+        print(currentPosition)
 
     def initializeCamera():
         self.camera = wpilib.USBCamera()
@@ -84,7 +92,7 @@ class MyRobot(wpilib.IterativeRobot):
 
     def stickDrive(self, c):
 
-        power = 1 #if c % 4 < 2 else .5
+        power = 1000 #if c % 4 < 2 else .5
         shouldActivateServo = False;
 
         if self.stick.getTrigger():
@@ -101,8 +109,8 @@ class MyRobot(wpilib.IterativeRobot):
         if self.stick.getRawButton(2): self.robot_shoot.arcadeDrive(-1, 0)
 
 
-        self.shooter.set(power/2 if self.stick.getRawButton(5) else (-power if self.stick.getRawButton(3) else 0))  #adjust height of shoot thingy
-
+        #self.shooter.set(power if self.stick.getRawButton(5) else (-power/2 if self.stick.getRawButton(3) else 0))  #adjust height of shoot thingy
+        self.shooter.set(50000)
         self.robot_drive.arcadeDrive(clamp(-self.stick.getY(), -self.maxspeed, self.maxspeed),
                                      clamp(-self.stick.getX(), -self.maxspeed, self.maxspeed))
 
