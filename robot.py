@@ -20,7 +20,7 @@ class MyRobot(wpilib.IterativeRobot):
         # 0 - back right
         # 1 - front right
         self.robot_drive = wpilib.RobotDrive(0,1,2,3); self.robot_drive.setSafetyEnabled(False)
-        self.shooter     = wpilib.TalonSRX(6)
+        self.shooter     = wpilib.CANTalon(6)
         self.robot_shoot = wpilib.RobotDrive(4,5);     self.robot_shoot.setSafetyEnabled(False)
         self.servo       = wpilib.Servo(7);
         #self.robot_shoot.setInvertedMotor(2, True)
@@ -73,12 +73,12 @@ class MyRobot(wpilib.IterativeRobot):
             self.auto_loop_counter += 1
         
             # Check if we've completed 100 loops (approximately 2 seconds)
-            if self.auto_loop_counter < 100:
-                self.robot_drive.drive(-0.4, 0) # Drive forwards at half speed
-            elif self.auto_loop_counter < 200:
-                self.robot_drive.drive(-0.4, 1) # Drive left at half speed
-            elif self.auto_loop_counter < 300:
-                self.robot_drive.drive(-0.4, 0) # Drive forwards at half speed
+            first = 125
+            second = 100
+            if self.auto_loop_counter < first:
+                self.robot_drive.drive(0.4, 0) # Drive forwards at half speed
+            elif self.auto_loop_counter < first + second:
+                self.robot_drive.drive(0.4, 1) # Drive left at half speed
             else:
                 self.robot_drive.drive(0, 0)    # Stop robot
 
