@@ -73,12 +73,21 @@ class MyRobot(wpilib.IterativeRobot):
             self.auto_loop_counter += 1
         
             # Check if we've completed 100 loops (approximately 2 seconds)
-            first = 125
+            first = 120
             second = 100
+            third = 20
+            fourth = 100
             if self.auto_loop_counter < first:
                 self.robot_drive.drive(0.4, 0) # Drive forwards at half speed
             elif self.auto_loop_counter < first + second:
                 self.robot_drive.drive(0.4, 1) # Drive left at half speed
+            elif self.auto_loop_counter < first + second + third:
+                self.shooter.set(1)
+            #elif self.auto_loop_counter < first + second + third + fourth:
+            #    self.robot_shoot.arcadeDrive(1,0)
+            #    self.servo.set(0)
+            #    self.shooter.set(.2)
+
             else:
                 self.robot_drive.drive(0, 0)    # Stop robot
 
@@ -94,6 +103,18 @@ class MyRobot(wpilib.IterativeRobot):
         elif (self.auto_loop_counter - self.shoot_loop_counter < 100):
             self.servo.set(0)
             self.robot_shoot.arcadeDrive(1, 0)
+
+
+
+
+
+
+
+
+
+
+
+            
         else:
             self.servo.set(1)
             self.robot_shoot.arcadeDrive(0, 0)
