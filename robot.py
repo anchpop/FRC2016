@@ -24,8 +24,6 @@ class MyRobot(wpilib.IterativeRobot):
         self.robot_shoot = wpilib.RobotDrive(4,5);     self.robot_shoot.setSafetyEnabled(False)
         self.servo       = wpilib.Servo(7);
         #self.robot_shoot.setInvertedMotor(2, True)
-        #self.robot_shoot = wpilib.
-        #self.robot_pitch = wpilib.RobotDrive(6,7); self.robot_pitch.setSafetyEnabled(False)
         
         self.maxspeed    = 1
         
@@ -34,10 +32,10 @@ class MyRobot(wpilib.IterativeRobot):
         self.num_buttons = self.stick.getButtonCount();
         print('num buttons: ', self.num_buttons)
 
-        logging.basicConfig(level=logging.DEBUG)         #to see messages from networktables
+        logging.basicConfig(level=logging.DEBUG)         # to see messages from networktables
         self.raspi = NetworkTable.getTable('Pi')
 
-        #initializeCamera()
+        # initializeCamera()
 
     def initializeCamera():
         self.camera = wpilib.USBCamera()
@@ -78,9 +76,9 @@ class MyRobot(wpilib.IterativeRobot):
             third = 20
             fourth = 100
             if self.auto_loop_counter < first:
-                self.robot_drive.drive(0.4, 0) # Drive forwards at half speed
+                self.robot_drive.drive(0.4, 0)                  # Drive forwards at half speed
             elif self.auto_loop_counter < first + second:
-                self.robot_drive.drive(0.4, 1) # Drive left at half speed
+                self.robot_drive.drive(0.4, 1)                  # Drive left at half speed
             elif self.auto_loop_counter < first + second + third:
                 self.shooter.set(1)
             #elif self.auto_loop_counter < first + second + third + fourth:
@@ -92,52 +90,46 @@ class MyRobot(wpilib.IterativeRobot):
                 self.robot_drive.drive(0, 0)    # Stop robot
 
     def stickDrive(self, c):
-
-        power = 1 #if c % 4 < 2 else .5
+        power = 1                                               # if c % 4 < 2 else .5
         shouldActivateServo = False;
 
         if self.stick.getTrigger():
+            # trigger depressed - spin shooter wheels in shooting direction
+            # -------------------------------------------------------------
             self.shoot_loop_counter = self.auto_loop_counter
             self.robot_shoot.arcadeDrive(1, 0)
 
         elif (self.auto_loop_counter - self.shoot_loop_counter < 100):
+            # trigger released for less than 1/2 second - keep spinning shooter wheels in shooting direction
+            # ----------------------------------------------------------------------------------------------
             self.servo.set(0)
             self.robot_shoot.arcadeDrive(1, 0)
-
-
-
-
-
-
-
-
-
-
-
             
         else:
+            #  1/2 second after trigger released - activate servo to shoot ball, and turn wheels off
+            # --------------------------------------------------------------------------------------
             self.servo.set(1)
             self.robot_shoot.arcadeDrive(0, 0)
 
-        if self.stick.getRawButton(2): self.robot_shoot.arcadeDrive(-1, 0)
+        # button 2 => spin shooter wheels inwards to retrieve ball
+        # --------------------------------------------------------
+        if self.stick.getRawButton(2):
+            self.robot_shoot.arcadeDrive(-1, 0)
 
+        # adjust angle of shooter
+        # -----------------------
+        self.shooter.set(power/2 if self.stick.getRawButton(5) else (-power if self.stick.getRawButton(3) else 0)) 
 
-        self.shooter.set(power/2 if self.stick.getRawButton(5) else (-power if self.stick.getRawButton(3) else 0))  #adjust height of shoot thingy
-
+        # activate wheels according to joystick position
+        # ----------------------------------------------
         self.robot_drive.arcadeDrive(clamp(-self.stick.getY(), -self.maxspeed, self.maxspeed),
                                      clamp(-self.stick.getX(), -self.maxspeed, self.maxspeed))
-
-        
-        #self.robot_shoot.arcadeDrive(-1 if self.stick.getRawButton(7) else (1 if self.stick.getRawButton(8) else 0), 0)
 
     def teleopInit(self):
         self.raspi_control = False
         self.auto_loop_counter = 0
         self.errorReached = False;
-
-
         self.shoot_loop_counter = -1000000
-        self.triggerDepressedLastFrame = False
 
     def teleopPeriodic(self): 
         """This function is called periodically during operator control."""
@@ -154,8 +146,6 @@ class MyRobot(wpilib.IterativeRobot):
             self.stickDrive(self.auto_loop_counter)
             
         self.auto_loop_counter += 1
-
-
 
     def testPeriodic(self):
         """This function is called periodically during test mode."""
