@@ -35,7 +35,7 @@ class MyRobot(wpilib.IterativeRobot):
         logging.basicConfig(level=logging.DEBUG)         # to see messages from networktables
         self.raspi = NetworkTable.getTable('Pi')
 
-        # initializeCamera()
+        #initializeCamera()
 
     def initializeCamera():
         self.camera = wpilib.USBCamera()
@@ -45,6 +45,9 @@ class MyRobot(wpilib.IterativeRobot):
 
         self.server = wpilib.CameraServer.getInstance()
         self.server.startAutomaticCapture(self.camera)
+
+        logger = logging.getLogger("robot")
+        self.logger.info("Started camera server")
 
     def autonomousInit(self):
         """This function is run once each time the robot enters autonomous mode."""
