@@ -156,7 +156,7 @@ class MyRobot(wpilib.IterativeRobot):
                     print("piTime could not be retrieved from table. Is the pi connected?") 
                     self.errorReached = True;
                     
-            if _shoot == 1 or self.shoot == 1:
+            if not self.errorReached and (_shoot == 1 or self.shoot == 1):
                 # we are correctly aligned - shoot
                 # --------------------------------
                 if self.shoot == 0:
