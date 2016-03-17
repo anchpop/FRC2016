@@ -60,6 +60,7 @@ class MyRobot(wpilib.IterativeRobot):
         self.shooter.setFeedbackDevice(0); #0 is quad controller
         self.shooter.setPID(1, .1, 0.01); #Set the PID constants (p, i, d)
         self.shooter.enableControl(); #Enable PID control on the talon
+        self.shooter.reverseOutput(-1);
 
 
 
