@@ -126,22 +126,59 @@ class MyRobot(wpilib.IterativeRobot):
                                      clamp(-self.stick.getX(), -self.maxspeed, self.maxspeed))
 
     def teleopInit(self):
-        self.raspi_control = False
+        self.raspi_control = True
         self.auto_loop_counter = 0
         self.errorReached = False;
         self.shoot_loop_counter = -1000000
+        self.shoot = 0
 
     def teleopPeriodic(self): 
         """This function is called periodically during operator control."""
         
         if self.raspi_control:
+            if self.stick.getTrigger():
+                self.raspi_control = False
+                
             try:
-                print('piTime: ', self.raspi.getNumber('piTime'))
-                self.raspi.putNumber('robotTime', self.auto_loop_counter)
+                # get movement instructions from rapsberry Pi
+                # -------------------------------------------
+                pan    = self.raspi.getNumber('pan')
+                tilt   = self.raspi.getNumber('tilt')
+                _shoot = self.raspi.getNumber('shoot')
+                print('pan = %d, tilt = %d, shoot=%d ' % (pan, tilt, _shoot))
+                #self.raspi.putNumber('robotTime', self.auto_loop_counter)
             except KeyError:
                 if not self.errorReached: 
                     print("piTime could not be retrieved from table. Is the pi connected?") 
                     self.errorReached = True;
+                    
+            if _shoot == 1 or self.shoot == 1:
+                # we are correctly aligned - shoot
+                # --------------------------------
+                if self.shoot == 0:
+                    self.shoot = 1
+                    self.shoot_loop_counter = self.auto_loop_counter
+                    self.robot_shoot.arcadeDrive(1, 0)
+                elif (self.auto_loop_counter - self.shoot_loop_counter < 100):
+                    # less than 1/2 second after shoot command - keep spinning shooter wheels in shooting direction
+                    # ----------------------------------------------------------------------------------------------
+                    self.servo.set(0)
+                    self.robot_shoot.arcadeDrive(1, 0)
+                elif (self.auto_loop_counter - self.shoot_loop_counter < 120):
+                    #  1/2 second after shoot command - activate servo to shoot ball
+                    # --------------------------------------------------------------
+                    self.servo.set(1)
+                    self.robot_shoot.arcadeDrive(1, 0)
+                else:
+                    # turn wheels off, and give control back to Alex
+                    # ----------------------------------------------
+                    self.robot_shoot.arcadeDrive(0, 0)
+                    self.shoot = 0
+                    #self.raspi_control = False
+            else:
+                # adjust pan/tilt so that we point to the target
+                # ----------------------------------------------
+                self.robot_drive.arcadeDrive(0, clamp(pan / 10, -0.8, 0.8))
         else:
             self.stickDrive(self.auto_loop_counter)
             

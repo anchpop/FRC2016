@@ -70,11 +70,7 @@ class point:
 #capsize = point(320, 240)
 capsize = point(640, 480)
 
-# Default Pan/Tilt for the camera in degrees.
-# Camera range is from 0 to 180
-# -------------------------------------------
-cam_pan  = 70
-cam_tilt = 70
+cam_center_angle = 35
 
 # Target info
 # -----------
@@ -82,12 +78,12 @@ top_target_height = 97.0  # the height to the top of the target in first strongh
 
 # Camera info
 # -----------
-camera_height   = 20.0  # height of the camera on robot - update later
-vertical_fov    = 41.4  # PI camera info
-horizontal_fov  = 53.5  # see https://www.raspberrypi.org/documentation/hardware/camera.md
+# camera_height   = 20.0  # height of the camera on robot - update later
+# vertical_fov    = 41.4  # PI camera info
+# horizontal_fov  = 53.5  # see https://www.raspberrypi.org/documentation/hardware/camera.md
 
-# horizontal_fov  = 64.0  # est. Logitech c905 webcam
-# vertical_fov    = 48.0  # est. Logitech c905 webcam
+horizontal_fov  = 64.0  # est. Logitech c905 webcam
+vertical_fov    = 48.0  # est. Logitech c905 webcam
 
 # ------------------------------------------------------------------------
 # Set up the CascadeClassifier for face tracking
@@ -134,8 +130,8 @@ def findTargetSift(frame, kp1, desc1):
 # ------------------------------------------------------------------------
 # move the camera so that it points to pixel (x, y) of the previous frame
 # ------------------------------------------------------------------------
-def track(p):
-    global cam_pan, cam_tilt
+def track(p, raspi):
+    global cam_center_angle
 
     # Correct relative to center of image
     # -----------------------------------
@@ -144,24 +140,32 @@ def track(p):
     # Convert to percentage offset
     # ----------------------------
     diff.toFloat()
-    turn = point(diff.x / capsize.x / 2, diff.y / capsize.y / 2)
+    # print('diff = (%f, %f)' % (diff.x, diff.y))                   # in pixels
+    turn = point(diff.x / capsize.x, diff.y / capsize.y)  # in % 
+    # print('turn = (%f, %f)' % (turn.x, turn.y))
 
     # Scale offset to degrees
     # -----------------------
-    turn.x   = turn.x * 2.5          # VFOV
-    turn.y   = turn.y * 2.5          # HFOV
-    cam_pan  += -turn.x
-    cam_tilt +=  turn.y
+    turn.x   =  turn.x * horizontal_fov
+    turn.y   = -turn.y * vertical_fov
+    # print('turn = (%f, %f)' % (turn.x, turn.y))
+
+    cam_pan  = -turn.x
+    cam_tilt =  cam_center_angle + turn.y
 
     # Clamp Pan/Tilt to 0 to 180 degrees
     # ----------------------------------
-    cam_pan  = max(0, min(180, cam_pan))
-    cam_tilt = max(0, min(180, cam_tilt))
+    cam_tilt = max(0, min(80, cam_tilt))
     
-    # Update the servos
-    # -----------------
-    pan(cam_pan)
-    tilt(cam_tilt)
+    # Update the robot
+    # ----------------
+    # print('pan = %d, tilt = %d ' % (cam_pan, cam_tilt))
+    if int(cam_pan) == 0:
+        raspi.putNumber('shoot',  1)
+    else:
+        raspi.putNumber('shoot',  0)
+        raspi.putNumber('pan',  int(cam_pan))
+        raspi.putNumber('tilt', int(cam_tilt))
 
 # ------------------------------------------------------------------------
 # Set up the capture with our frame size
@@ -198,12 +202,12 @@ def MainProgram():
         # try 'v4l2-ctl -l' to show all possible controls
         # use '-d /dev/video1' if more than one device
 
+    global cam_center_angle
+    cam_center_angle = 35                                   # default value, center of image
+    
     # ------------------------------------------------------------------------
     # Turn the camera to the default position
     # ------------------------------------------------------------------------
-    pan(cam_pan)
-    tilt(cam_tilt)
-
     initCapture()                                   # setup camera and create video_capture object
 
     method = 0                                      # 0 = face tracking, 1 = SURF
@@ -220,7 +224,6 @@ def MainProgram():
             kp1, desc1 = sift.detectAndCompute(img1, None)
 
     raspi = initNetworktables()
-    i = 0
     
     while True:
         ret, frame = video_capture.read()           # get a frame
@@ -238,7 +241,7 @@ def MainProgram():
         
         if p:
             #cv2.circle(frame, p.asTuple(), 3, 255, -1)
-            track(p)                                # Point the camera to the returned position
+            track(p, raspi)                         # Point the camera to the returned position
 
         if img != None:
             frame = img
@@ -250,14 +253,6 @@ def MainProgram():
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
-
-        raspi.putNumber('piTime', i)
-        try:
-            print('robotTime:', raspi.getNumber('robotTime'))
-        except KeyError:
-            print('robotTime: n/a')
-        sys.stdout.flush()
-        i += 1
 
     # When everything is done, release the capture
     # --------------------------------------------
