@@ -134,11 +134,12 @@ class MyRobot(wpilib.IterativeRobot):
 
     def teleopPeriodic(self): 
         """This function is called periodically during operator control."""
-        
+        if self.num_buttons == 0 or self.stick.getTrigger():
+            self.raspi_control = True
+        else:
+            self.raspi_control = False
+            
         if self.raspi_control:
-            if self.stick.getTrigger():
-                self.raspi_control = False
-                
             try:
                 # get movement instructions from rapsberry Pi
                 # -------------------------------------------
@@ -174,7 +175,7 @@ class MyRobot(wpilib.IterativeRobot):
                     # ----------------------------------------------
                     self.robot_shoot.arcadeDrive(0, 0)
                     self.shoot = 0
-                    #self.raspi_control = False
+                    self.raspi_control = False
             else:
                 # adjust pan/tilt so that we point to the target
                 # ----------------------------------------------
