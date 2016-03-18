@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import cv2, sys, time, os, math
-from pantilt_stub import *
 import logging
 from networktables import NetworkTable
 
@@ -196,11 +195,14 @@ def initNetworktables():
 # ------------------------------------------------------------------------
 def MainProgram():
     if sys.platform != 'win32':
-        os.system('sudo modprobe bcm2835-v4l2')     # Load the BCM V4l2 driver for /dev/video0
-        os.system('v4l2-ctl -p 4')                  # Set the framerate (not sure this does anything!)
+        #os.system('sudo modprobe bcm2835-v4l2')     # Load the BCM V4l2 driver for /dev/video0
+        #os.system('v4l2-ctl -p 4')                  # Set the framerate (not sure this does anything!)
         #os.system('v4l2-ctl -c focus_auto=0')      # Disable autofocus??
         # try 'v4l2-ctl -l' to show all possible controls
         # use '-d /dev/video1' if more than one device
+        os.system('sudo rmmod uvcvideo')
+        os.system('sudo modprobe uvcvideo nodrop=1 timeout=5000 quirks=0x80') 
+        pass
 
     global cam_center_angle
     cam_center_angle = 35                                   # default value, center of image
