@@ -56,13 +56,15 @@ class MyRobot(wpilib.IterativeRobot):
         #initializeCamera()
 
         #initializeTalon()
-        self.shooter.changeControlMode(1); #Change control mode of talon, default is PercentVbus (-1.0 to 1.0). 1 is position, which is what we want
+        #self.shooter.changeControlMode(1); #Change control mode of talon, default is PercentVbus (-1.0 to 1.0). 1 is position, which is what we want
         self.shooter.setFeedbackDevice(0); #0 is quad controller
-        self.shooter.setPID(1, .1, 0.01); #Set the PID constants (p, i, d)
+        self.shooter.setPID(150, 50, 50); #Set the PID constants (p, i, d)
         self.shooter.enableControl(); #Enable PID control on the talon
         self.shooter.reverseOutput(-1);
 
-
+    def pLoop(target, p, bias, real):
+        error = real - target
+        return clamp(p * error + bias, -1, 1)
 
     def autonomousInit(self):
         """This function is run once each time the robot enters autonomous mode."""
@@ -119,7 +121,8 @@ class MyRobot(wpilib.IterativeRobot):
 
         #self.shooter.set(power if self.stick.getRawButton(5) else (-power/2 if self.stick.getRawButton(3) else 0))  #adjust height of shoot thingy
         
-        self.shooter.set(50000)
+        #self.shooter.set(300)
+        self.shooter.set(pLoop(300, .005, .2, self.shooter.getEncPosition()))
         self.robot_drive.arcadeDrive(clamp(-self.stick.getY(), -self.maxspeed, self.maxspeed),
                                      clamp(-self.stick.getX(), -self.maxspeed, self.maxspeed))
 
