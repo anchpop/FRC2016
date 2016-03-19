@@ -98,31 +98,19 @@ class MyRobot(wpilib.IterativeRobot):
 
         if self.stick.getTrigger():
             self.shoot_loop_counter = self.auto_loop_counter
-            self.robot_shoot.arcadeDrive(1, 0)
+            self.robot_shoot.arcadeDrive(-1, 0)
 
         elif (self.auto_loop_counter - self.shoot_loop_counter < 100):
             self.servo.set(0)
-            self.robot_shoot.arcadeDrive(1, 0)
-
-
-
-
-
-
-
-
-
-
-
-            
+            self.robot_shoot.arcadeDrive(-1, 0)
         else:
             self.servo.set(1)
             self.robot_shoot.arcadeDrive(0, 0)
 
-        if self.stick.getRawButton(2): self.robot_shoot.arcadeDrive(-1, 0)
+        if self.stick.getRawButton(2): self.robot_shoot.arcadeDrive(1, 0)
 
 
-        self.shooter.set(power/2 if self.stick.getRawButton(5) else (-power if self.stick.getRawButton(3) else 0))  #adjust height of shoot thingy
+        self.shooter.set(power/2 if self.stick.getRawButton(5) else (-power if self.stick.getRawButton(3) else (-.1 if self.stick.getTrigger() else 0)))  #adjust height of shoot thingy
 
         self.robot_drive.arcadeDrive(clamp(-self.stick.getY(), -self.maxspeed, self.maxspeed),
                                      clamp(-self.stick.getX(), -self.maxspeed, self.maxspeed))
