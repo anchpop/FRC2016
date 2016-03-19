@@ -93,7 +93,7 @@ class MyRobot(wpilib.IterativeRobot):
                 self.robot_drive.drive(0, 0)    # Stop robot
 
     def stickDrive(self, c):
-        power = 1                                               # if c % 4 < 2 else .5
+        power = 1
         shouldActivateServo = False;
 
         if self.stick.getTrigger():
