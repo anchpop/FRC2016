@@ -82,19 +82,19 @@ class MyRobot(wpilib.IterativeRobot):
             if self.auto_loop_counter < first:
                 self.robot_drive.drive(0.4, 0) # Drive forwards at half speed
             elif self.auto_loop_counter < first + second:
-                self.robot_drive.drive(0.6, .8) # turn left at half speed
-            elif self.auto_loop_counter < first + second + raisemode:
+                self.robot_drive.drive(0.6, .8) # turn left/go forward at half speed
+            elif self.auto_loop_counter < first + second + raisemode: #raise the shooter
                 self.robot_drive.drive(0, 0)
                 self.shooter.set(-.6)
-            elif self.auto_loop_counter < first + second + raisemode + third:
+            elif self.auto_loop_counter < first + second + raisemode + third: #spin wheels
                 self.robot_drive.drive(0, 0)
                 self.shooter.set(-.1)
                 self.robot_shoot.arcadeDrive(-1, 0)
-            elif self.auto_loop_counter < first + second + raisemode + third + fourth:
+            elif self.auto_loop_counter < first + second + raisemode + third + fourth: #shoot ball
                 self.robot_shoot.arcadeDrive(-1, 0)
                 self.servo.set(0)
                 self.shooter.set(-.1)
-            elif self.auto_loop_counter < first + second + raisemode + third + fourth + fith:
+            elif self.auto_loop_counter < first + second + raisemode + third + fourth + fith: #continue shoothing ball
                 self.robot_shoot.arcadeDrive(-1, 0)
 
             else:
