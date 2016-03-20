@@ -13,17 +13,31 @@ def clamp(n, low, high):
 class MyRobot(wpilib.IterativeRobot):
     #: update every 0.005 seconds/5 milliseconds (200Hz)
     kUpdatePeriod = 0.005
-    
+
+    def initTalon(self):
+        if self.use_pid_loop:
+            self.shooter.changeControlMode(1);       # Change control mode of talon, default is PercentVbus
+                                                     # (-1.0 to 1.0). 1 is position, which is what we want
+            self.shooter.setFeedbackDevice(0);       # 0 is quad controller
+            self.shooter.setPID(10.0, 0.00001, 0);   # Set the PID constants (p, i, d)
+            self.shooter.enableControl();            # Enable PID control on the talon
+        else:
+            self.shooter.changeControlMode(0);  
+        
     def robotInit(self):
-        # 2 - back left 
-        # 3 - front left
         # 0 - back right
         # 1 - front right
+        # 2 - back left 
+        # 3 - front left
         self.robot_drive = wpilib.RobotDrive(0,1,2,3); self.robot_drive.setSafetyEnabled(False)
         self.shooter     = wpilib.CANTalon(6)
         self.robot_shoot = wpilib.RobotDrive(4,5);     self.robot_shoot.setSafetyEnabled(False)
         self.servo       = wpilib.Servo(7);
         #self.robot_shoot.setInvertedMotor(2, True)
+
+        self.shooter.reverseOutput(True);
+        self.current_pid   = 00
+        self.pid_increment = 5
         
         self.maxspeed    = 1
         
@@ -35,25 +49,14 @@ class MyRobot(wpilib.IterativeRobot):
         logging.basicConfig(level=logging.DEBUG)         # to see messages from networktables
         self.raspi = NetworkTable.getTable('Pi')
 
-        #initializeCamera()
-
-    def initializeCamera():
-        self.camera = wpilib.USBCamera()
-        self.camera.setExposureManual(50)
-        self.camera.setBrightness(80)
-        self.camera.updateSettings() # force update before we start thread
-
-        self.server = wpilib.CameraServer.getInstance()
-        self.server.startAutomaticCapture(self.camera)
-
-        logger = logging.getLogger("robot")
-        self.logger.info("Started camera server")
-
     def autonomousInit(self):
         """This function is run once each time the robot enters autonomous mode."""
         self.auto_loop_counter = 0
         self.maxspeed = 1
         self.raspi_control = False
+        self.use_pid_loop  = False
+        self.initTalon()
+        
 
     def autonomousPeriodic(self):
         """This function is called periodically during autonomous.
@@ -72,39 +75,37 @@ class MyRobot(wpilib.IterativeRobot):
             pass
         else:
             self.auto_loop_counter += 1
-        
-            # Check if we've completed 100 loops (approximately 2 seconds)
-            first = 160
-            second = 75
+            
+            first     = 160
+            second    = 75
             raisemode = 10
-            third = 70
-            fourth = 30
-            fith = 30
+            third     = 70
+            fourth    = 30
+            fith      = 30
+            
             if self.auto_loop_counter < first:
-                self.robot_drive.drive(0.4, 0)                  # Drive forwards at half speed
+                self.robot_drive.drive(0.4, 0) # Drive forwards at half speed
             elif self.auto_loop_counter < first + second:
                 self.robot_drive.drive(0.6, .8) # turn left/go forward at half speed
             elif self.auto_loop_counter < first + second + raisemode: #raise the shooter
                 self.robot_drive.drive(0, 0)
-                self.shooter.set(-.6)
+                self.shooter.set(.6)
             elif self.auto_loop_counter < first + second + raisemode + third: #spin wheels
                 self.robot_drive.drive(0, 0)
-                self.shooter.set(-.1)
+                self.shooter.set(.1)
                 self.robot_shoot.arcadeDrive(-1, 0)
             elif self.auto_loop_counter < first + second + raisemode + third + fourth: #shoot ball
                 self.robot_shoot.arcadeDrive(-1, 0)
                 self.servo.set(0)
-                self.shooter.set(-.1)
+                self.shooter.set(.1)
             elif self.auto_loop_counter < first + second + raisemode + third + fourth + fith: #continue shoothing ball
                 self.robot_shoot.arcadeDrive(-1, 0)
-
             else:
                 self.servo.set(1)
                 self.robot_drive.drive(0, 0)    # Stop robot
                 self.robot_shoot.arcadeDrive(0, 0)
 
     def stickDrive(self, c):
-        power = 1
         shouldActivateServo = False;
 
         if self.stick.getTrigger():
@@ -114,44 +115,50 @@ class MyRobot(wpilib.IterativeRobot):
             self.robot_shoot.arcadeDrive(-1, 0)
 
         elif (self.auto_loop_counter - self.shoot_loop_counter < 100):
-            # trigger released for less than 1/2 second - keep spinning shooter wheels in shooting direction
+            # trigger released for less than 1/2 second - shoot and keep spinning shooter wheels in shooting direction
             # ----------------------------------------------------------------------------------------------
             self.servo.set(0)
             self.robot_shoot.arcadeDrive(-1, 0)
+            
         else:
-            #  1/2 second after trigger released - activate servo to shoot ball, and turn wheels off
+            #  1/2 second after trigger released - retract servo, and turn wheels off
             # --------------------------------------------------------------------------------------
             self.servo.set(1)
             self.robot_shoot.arcadeDrive(0, 0)
+
         # button 2 => spin shooter wheels inwards to retrieve ball
         # --------------------------------------------------------
         if self.stick.getRawButton(2):
-            self.robot_shoot.arcadeDrive(-1, 0)
+            self.robot_shoot.arcadeDrive(1, 0)
 
         # adjust angle of shooter
         # -----------------------
-        self.shooter.set(power/2 if self.stick.getRawButton(5) else (-power if self.stick.getRawButton(3) else 0)) 
+        up_btn   = self.stick.getRawButton(3)
+        down_btn = self.stick.getRawButton(5)
+        if self.use_pid_loop:
+            self.current_pid += -self.pid_increment if down_btn else (self.pid_increment if up_btn else 0)
+            self.current_pid  = clamp(self.current_pid, 0, 750)
+            self.shooter.set(self.current_pid)
+        else:
+            self.shooter.set(-0.5 if down_btn else (1.0 if up_btn else 0)) 
 
         # activate wheels according to joystick position
         # ----------------------------------------------
-        self.shooter.set(power/2 if self.stick.getRawButton(5) else (-power if self.stick.getRawButton(3) else (-.1 if self.stick.getTrigger() else 0)))  #adjust height of shoot thingy
-
         self.robot_drive.arcadeDrive(clamp(-self.stick.getY(), -self.maxspeed, self.maxspeed),
                                      clamp(-self.stick.getX(), -self.maxspeed, self.maxspeed))
 
     def teleopInit(self):
-        self.raspi_control = True
+        self.raspi_control = False
         self.auto_loop_counter = 0
         self.errorReached = False;
         self.shoot_loop_counter = -1000000
         self.shoot = 0
+        self.use_pid_loop = True
+        self.initTalon()
 
     def teleopPeriodic(self): 
         """This function is called periodically during operator control."""
-        if self.num_buttons == 0 or self.stick.getTrigger():
-            self.raspi_control = True
-        else:
-            self.raspi_control = False
+        self.raspi_control = self.num_buttons == 0 or self.stick.getTrigger()
             
         if self.raspi_control:
             try:
@@ -166,24 +173,25 @@ class MyRobot(wpilib.IterativeRobot):
                 if not self.errorReached: 
                     print("piTime could not be retrieved from table. Is the pi connected?") 
                     self.errorReached = True;
-                    
-            if not self.errorReached and (_shoot == 1 or self.shoot == 1):
+
+        if self.raspi_control and not self.errorReached:
+            if _shoot == 1 or self.shoot == 1:
                 # we are correctly aligned - shoot
                 # --------------------------------
                 if self.shoot == 0:
                     self.shoot = 1
                     self.shoot_loop_counter = self.auto_loop_counter
-                    self.robot_shoot.arcadeDrive(1, 0)
+                    self.robot_shoot.arcadeDrive(-1, 0)
                 elif (self.auto_loop_counter - self.shoot_loop_counter < 100):
                     # less than 1/2 second after shoot command - keep spinning shooter wheels in shooting direction
                     # ----------------------------------------------------------------------------------------------
                     self.servo.set(0)
-                    self.robot_shoot.arcadeDrive(1, 0)
+                    self.robot_shoot.arcadeDrive(-1, 0)
                 elif (self.auto_loop_counter - self.shoot_loop_counter < 120):
                     #  1/2 second after shoot command - activate servo to shoot ball
                     # --------------------------------------------------------------
                     self.servo.set(1)
-                    self.robot_shoot.arcadeDrive(1, 0)
+                    self.robot_shoot.arcadeDrive(-1, 0)
                 else:
                     # turn wheels off, and give control back to Alex
                     # ----------------------------------------------

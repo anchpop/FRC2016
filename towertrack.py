@@ -100,13 +100,14 @@ def initFaceTracking():
 # Given a frame, find the first face, draw a green rectangle around it,
 # and return the center of the face
 # ------------------------------------------------------------------------
-def findFace(frame):
+def findFace(frame, feedback):
     global faceCascade
     
     faces = faceCascade.detectMultiScale(frame, 1.1, 3, 0, (10, 10))
-    
-    for (x, y, w, h) in faces:
-        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)  # Draw a green rectangle around the face
+
+    if feedback:
+        for (x, y, w, h) in faces:
+            cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)  # Draw a green rectangle around the face
         
     for (x, y, w, h) in faces:
         return (frame, point(x, y) + point(w, h) / 2)             # and return the center of the first one found
@@ -117,7 +118,7 @@ def findFace(frame):
 # Given a frame, find the FRC Stronghold 2016 tower target
 # and return the center of it
 # ------------------------------------------------------------------------
-def findTargetSift(frame, kp1, desc1):
+def findTargetSift(frame, kp1, desc1, feedback):
     
     # Convert to greyscale for detection
     # ----------------------------------
@@ -129,7 +130,7 @@ def findTargetSift(frame, kp1, desc1):
 # ------------------------------------------------------------------------
 # move the camera so that it points to pixel (x, y) of the previous frame
 # ------------------------------------------------------------------------
-def track(p, raspi):
+def track(p, raspi, feedback):
     global cam_center_angle
 
     # Correct relative to center of image
@@ -158,7 +159,8 @@ def track(p, raspi):
     
     # Update the robot
     # ----------------
-    # print('pan = %d, tilt = %d ' % (cam_pan, cam_tilt))
+    if feedback:
+        print('pan = %d, tilt = %d ' % (cam_pan, cam_tilt))
     if int(cam_pan) == 0:
         raspi.putNumber('shoot',  1)
     else:
@@ -194,14 +196,15 @@ def initNetworktables():
 # main capture/track/display loop
 # ------------------------------------------------------------------------
 def MainProgram():
-    if sys.platform != 'win32':
+    feedback = True or (sys.platform == 'win32')
+    if not sys.platform == 'win32':
         #os.system('sudo modprobe bcm2835-v4l2')     # Load the BCM V4l2 driver for /dev/video0
         #os.system('v4l2-ctl -p 4')                  # Set the framerate (not sure this does anything!)
         #os.system('v4l2-ctl -c focus_auto=0')      # Disable autofocus??
         # try 'v4l2-ctl -l' to show all possible controls
         # use '-d /dev/video1' if more than one device
-        os.system('sudo rmmod uvcvideo')
-        os.system('sudo modprobe uvcvideo nodrop=1 timeout=5000 quirks=0x80') 
+        #os.system('sudo rmmod uvcvideo')
+        #os.system('sudo modprobe uvcvideo nodrop=1 timeout=5000 quirks=0x80') 
         pass
 
     global cam_center_angle
@@ -235,26 +238,28 @@ def MainProgram():
             continue                                # maybe it was just a hiccup!
 
         if method == 0:
-            img, p = findFace(frame)                # Do face detection
+            img, p = findFace(frame, feedback)                # Do face detection
         elif method == 1 and img1 and not img1.empty():
-            img, p = findTargetSift(frame, kp1, desc1) # Do target detection using SIFT
+            img, p = findTargetSift(frame, kp1, desc1, feedback) # Do target detection using SIFT
         else:
             img, p = None, None
         
         if p:
             #cv2.circle(frame, p.asTuple(), 3, 255, -1)
-            track(p, raspi)                         # Point the camera to the returned position
+            track(p, raspi, feedback)                 # Point the camera to the returned position
 
-        if img != None:
+        # only on windows, show captured image in window
+        # ----------------------------------------------
+        if feedback and img != None:
             frame = img
         
-        frame = cv2.resize(frame, (capsize * 1).asTuple())
-        frame = cv2.flip(frame, 1)
+            frame = cv2.resize(frame, (capsize * 1).asTuple())
+            frame = cv2.flip(frame, 1)
 
-        cv2.imshow('Video', frame)                  # Display the image, with rectangle
+            cv2.imshow('Video', frame)                  # Display the image, with rectangle
 
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
     # When everything is done, release the capture
     # --------------------------------------------
