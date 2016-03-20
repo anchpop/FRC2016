@@ -147,6 +147,9 @@ class MyRobot(wpilib.IterativeRobot):
         self.robot_drive.arcadeDrive(clamp(-self.stick.getY(), -self.maxspeed, self.maxspeed),
                                      clamp(-self.stick.getX(), -self.maxspeed, self.maxspeed))
 
+    def log(self, str):
+        print(str)
+
     def teleopInit(self):
         self.raspi_control = False
         self.auto_loop_counter = 0
@@ -167,11 +170,10 @@ class MyRobot(wpilib.IterativeRobot):
                 pan    = self.raspi.getNumber('pan')
                 tilt   = self.raspi.getNumber('tilt')
                 _shoot = self.raspi.getNumber('shoot')
-                print('pan = %d, tilt = %d, shoot=%d ' % (pan, tilt, _shoot))
-                #self.raspi.putNumber('robotTime', self.auto_loop_counter)
+                self.log('pan = %d, tilt = %d, shoot=%d ' % (pan, tilt, _shoot))
             except KeyError:
                 if not self.errorReached: 
-                    print("piTime could not be retrieved from table. Is the pi connected?") 
+                    self.log("info could not be retrieved from NetworkTables. Is the pi connected?") 
                     self.errorReached = True;
 
         if self.raspi_control and not self.errorReached:
@@ -185,16 +187,16 @@ class MyRobot(wpilib.IterativeRobot):
                 elif (self.auto_loop_counter - self.shoot_loop_counter < 100):
                     # less than 1/2 second after shoot command - keep spinning shooter wheels in shooting direction
                     # ----------------------------------------------------------------------------------------------
-                    self.servo.set(0)
                     self.shooter_wheels.arcadeDrive(-1, 0)
                 elif (self.auto_loop_counter - self.shoot_loop_counter < 120):
                     #  1/2 second after shoot command - activate servo to shoot ball
                     # --------------------------------------------------------------
-                    self.servo.set(1)
+                    self.servo.set(0)
                     self.shooter_wheels.arcadeDrive(-1, 0)
                 else:
                     # turn wheels off, and give control back to Alex
                     # ----------------------------------------------
+                    self.servo.set(1)
                     self.shooter_wheels.arcadeDrive(0, 0)
                     self.shoot = 0
                     self.raspi_control = False

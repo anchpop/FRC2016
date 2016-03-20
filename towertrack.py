@@ -185,7 +185,7 @@ def initCapture():
 # networktables
 # ------------------------------------------------------------------------
 def initNetworktables():
-    logging.basicConfig(level=logging.DEBUG)         #to see messages from networktables
+    logging.basicConfig(level=logging.DEBUG)         # to see messages from networktables
     NetworkTable.setIPAddress('127.0.0.1')
     # NetworkTable.setIPAddress('roborio-5260.local')
     NetworkTable.setClientMode()
@@ -200,7 +200,7 @@ def MainProgram():
     if not sys.platform == 'win32':
         #os.system('sudo modprobe bcm2835-v4l2')     # Load the BCM V4l2 driver for /dev/video0
         #os.system('v4l2-ctl -p 4')                  # Set the framerate (not sure this does anything!)
-        #os.system('v4l2-ctl -c focus_auto=0')      # Disable autofocus??
+        #os.system('v4l2-ctl -c focus_auto=0')       # Disable autofocus??
         # try 'v4l2-ctl -l' to show all possible controls
         # use '-d /dev/video1' if more than one device
         #os.system('sudo rmmod uvcvideo')
