@@ -161,7 +161,7 @@ class MyRobot(wpilib.IterativeRobot):
 
     def teleopPeriodic(self): 
         """This function is called periodically during operator control."""
-        self.raspi_control = self.num_buttons == 0 or self.stick.getTrigger()
+        self.raspi_control = self.num_buttons == 0 or (self.stick.getTrigger() and self.shoot < 2)
             
         if self.raspi_control:
             try:
@@ -198,7 +198,7 @@ class MyRobot(wpilib.IterativeRobot):
                     # ----------------------------------------------
                     self.servo.set(1)
                     self.shooter_wheels.arcadeDrive(0, 0)
-                    self.shoot = 0
+                    self.shoot = 2
                     self.raspi_control = False
             else:
                 # adjust pan/tilt so that we point to the target
@@ -206,6 +206,8 @@ class MyRobot(wpilib.IterativeRobot):
                 self.robot_drive.arcadeDrive(0, clamp(pan / 10, -0.8, 0.8))
         else:
             self.stickDrive(self.auto_loop_counter)
+            if not self.stick.getTrigger():
+                self.shoot = 0                # after trigger released, we should be ready for another auto shoot
             
         self.auto_loop_counter += 1
 
